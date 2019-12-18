@@ -1,0 +1,10 @@
+{
+    "VAR_HOST": "localhost",
+    "VAR_USER": "root",
+    "VAR_PASSWORD": "",
+    "VAR_DATABASE": "sequelize",
+    "JWT_TOKEN_SECRET_KEY": "sau bao nam training",
+    "FB_APP_ID": "446047046333253",
+    "FB_APP_SECRET":"416d66e8afdb75521a2648a6e620cf8d",
+    "FB_CALLBACK_URL": "http://localhost:3000/public/account/auth/facebook/callback"
+}
