@@ -4,14 +4,52 @@ const Joi = require('joi');
 const { createHash, compare } = require('../../lib/bcrypt');
 const { reponseAPI } = require('../../lib/responseAPI');
 const { createToken } = require('../../lib/jwt');
-const passport = require('passport')
+const FacebookStrategy  = require('passport-facebook').Strategy;
+const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
+const config = require('../../config.json')
+const account = require('../../services/account');
+let { sendMailTokenResetPassword } = require('../../lib/emailHelper');
+
+passport.serializeUser(function(user, done) {
+    done(null, user);
+  });
+  
+passport.deserializeUser(function(obj, done) {
+    done(null, obj);
+});
+  
+passport.use(new FacebookStrategy({
+      clientID: config.FB_APP_ID,
+      clientSecret:config.FB_APP_SECRET ,
+      callbackURL: config.FB_CALLBACK_URL
+},
+function(accessToken, refreshToken, profile, done) {
+      process.nextTick(function () {
+        // console.log(accessToken, refreshToken, profile, done);
+        return done(null, profile);
+      });
+    }
+));
+  
+  
+passport.use(new GoogleStrategy({
+    clientID: config.GG_CLIENT_ID,
+    clientSecret: config.GG_CLIENT_SECRET,
+    callbackURL: config.GG_CALLBACK_URL,
+    },
+    function (token, refreshToken, profile, done) {
+    process.nextTick(function () {
+      return done(null, profile);
+    });
+})); 
+
 
 function validate(body) {
     return new Promise((resolve, reject) => {
         const schema = Joi.object().keys({
             name: Joi.string().alphanum().min(3).max(30),
-            username: Joi.string().alphanum().min(3).max(30).required(),
-            password: Joi.string().regex(/^[a-zA-Z0-9]{3,30}$/),
+            email: Joi.string().email(),
+            password: Joi.string().min(6).max(30),
         }).with('username', 'password');
         Joi.validate(body, schema, function (err, value) {
             if(err) {
@@ -26,20 +64,20 @@ function validate(body) {
 router.post('/register', async (req, res) => {
     try {
         await validate(req.body);
-        let checkUsername = await User.findOne({ where: { username: req.body.username} });
-        if(checkUsername) {
-             let result = reponseAPI({status: false, message: "username is exits",data: []})
+        let checkEmail= await User.findOne({ where: { email: req.body.email} });
+        if(checkEmail) {
+             let result = reponseAPI(false,"email is exits",[])
              return res.send(result);
         }
         req.body.password = await createHash(req.body.password);
         User.create(req.body)
         .then(user => {
             delete user.dataValues.password;
-            let result = reponseAPI({status: true, message: "success",data: user})
+            let result = reponseAPI(true,"success",user)
             return res.send(result);
         })
     } catch (error) {
-        let result = reponseAPI({status: false, message: error.message,data: []})
+        let result = reponseAPI( false, error.message, [])
         return res.send(result);
     }
 })
@@ -47,18 +85,18 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         await validate(req.body);
-        let user = await User.findOne({ where: { username: req.body.username} });
+        let user = await User.findOne({ where: { email: req.body.email} });
         if(!user) {
-             let result = reponseAPI({status: false, message: "username or password is vaild",data: []})
+             let result = reponseAPI(false,"email or password is vaild",[])
              return res.send(result);
         }
         await compare(req.body.password, user.dataValues.password);
         user.dataValues.token = await createToken({id: user.id});
         delete user.dataValues.password;
-        let result = reponseAPI({status: true, message: "Success",data: user})
+        let result = reponseAPI(true, "Success", user)
         return res.send(result);
     } catch (error) {
-        let result = reponseAPI({status: false, message: error.message,data: []})
+        let result = reponseAPI(false, error.message,[])
         return res.send(result);
     }
 })
@@ -70,4 +108,54 @@ router.get('/auth/facebook/callback',
 	  function(req, res) {
         res.redirect('/');
 });
+
+router.get('/auth/google', passport.authenticate('google', {scope: ['profile', 'email']}));
+
+router.get('/auth/google/callback',
+    passport.authenticate('google', {
+        successRedirect: '/',
+        failureRedirect: '/login'}),
+        function(req, res) {
+          res.redirect('/');
+});
+
+router.post('/password/forgot',async function (req, res) {
+    let email = req.body.email;
+    let user = await User.findOne({where: {email}});
+    if(user) {
+        let token = await account.generateTokenResetPassword(user.dataValues);
+        if(!token) {
+            let result = reponseAPI(false,"Generate token error ",[])
+            return res.send(result);
+        }
+        sendMailTokenResetPassword(email, user.dataValues.name, token);
+        let result = reponseAPI(true, "We sent email reset your password! Please check your email!",[])
+        return res.send(result);
+    } else{
+        let result = reponseAPI(false,"User email find not found!",[])
+        return res.status(404).send(result);
+    }
+})
+
+router.post('/password/forgot/change-password', async function (req, res) {
+    try {
+        let {
+            token,
+            newPassword,
+            againPassword,
+          } = req.body
+          await validate({password: newPassword});
+          if(newPassword!==againPassword) {
+            let result = reponseAPI(false,"Retype password does not match",[])
+            return res.send(result);
+          }
+          await  account.generateNewPassword(token, newPassword);
+          let result = reponseAPI(true,"Password changed successfully!", [])
+          return res.send(result)
+    } catch (error) {
+        let result = reponseAPI(false, error.message,[])
+        return res.send(result);
+    }
+})
+
 module.exports = router

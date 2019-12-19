@@ -1,8 +1,9 @@
 const { reponseAPI } = require('../lib/responseAPI');
 const { User } = require('../sequelize');
+const { verifyLogInToken } = require('../lib/jwt')
 
 app.use(async function (req, res, next) {
-    if (req.originalUrl.includes("/account"))
+    if (req.originalUrl.includes("/account") || req.user)
          next()
     else {
         let token = req.headers.token;
@@ -14,6 +15,7 @@ app.use(async function (req, res, next) {
                 let data = await verifyLogInToken(token);
                 let check = await User.findOne({where : { id : data.id }});
                 if(check) {
+                    req.session.userid = data.id;
                     return next();
                 } 
                 let send = reponseAPI({status: false,message: "user not exist" , data: []});

@@ -2,6 +2,7 @@ const Sequelize = require('sequelize')
 const { UserModel } = require('./models/user')
 const { BlogModel } = require('./models/blog')
 const { TagModel } = require('./models/tag')
+const { ForgotPasswordModel } = require('./models/forgot_password')
 const config = require('./config.json')
 
 const sequelize = new Sequelize(config.VAR_DATABASE, config.VAR_USER, config.VAR_PASSWORD, {
@@ -19,11 +20,13 @@ const User = UserModel(sequelize, Sequelize)
 const BlogTag = sequelize.define('blog_tag', {})
 const Blog = BlogModel(sequelize, Sequelize)
 const Tag = TagModel(sequelize, Sequelize)
+const ForgotPassword = ForgotPasswordModel(sequelize, Sequelize)
 
 Blog.belongsToMany(Tag, { through: BlogTag, unique: false })
 Tag.belongsToMany(Blog, { through: BlogTag, unique: false })
 
 Blog.belongsTo(User); //tao userId trong blog
+ForgotPassword.belongsTo(User); //tao userId trong blog
 
 sequelize.sync({ force: false })
   .then(() => {
@@ -33,5 +36,6 @@ sequelize.sync({ force: false })
 module.exports = {
   User,
   Blog,
-  Tag
+  Tag,
+  ForgotPassword
 }
