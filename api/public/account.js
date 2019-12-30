@@ -47,9 +47,12 @@ passport.use(new GoogleStrategy({
 function validate(body) {
     return new Promise((resolve, reject) => {
         const schema = Joi.object().keys({
-            name: Joi.string().alphanum().min(3).max(30),
-            email: Joi.string().email(),
-            password: Joi.string().min(6).max(30),
+            name: Joi.string().min(3).max(30).required(),
+            email: Joi.string().email().required(),
+            password: Joi.string().min(6).max(30).required(),
+            sex: Joi.string().min(3).max(30).required(),
+            phone: Joi.string().min(10).max(11).required(),
+            dob:Joi.string().required()
         }).with('username', 'password');
         Joi.validate(body, schema, function (err, value) {
             if(err) {

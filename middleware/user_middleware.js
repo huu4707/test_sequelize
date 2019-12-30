@@ -3,7 +3,7 @@ const { User } = require('../sequelize');
 const { verifyLogInToken } = require('../lib/jwt')
 
 app.use(async function (req, res, next) {
-    if (req.originalUrl.includes("/account") || req.user)
+    if (req.originalUrl.includes("/public") || req.user)
          next()
     else {
         let token = req.headers.token;

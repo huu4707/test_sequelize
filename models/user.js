@@ -8,6 +8,9 @@ function UserModel(sequelize, type) {
         name: { type: type.STRING,  allowNull: false },
         email: { type: type.STRING,  allowNull: false },
         password: { type: type.STRING,  allowNull: false },
+        sex: { type: type.STRING,  allowNull: false },
+        phone: { type: type.STRING,  allowNull: false },
+        dob: { type: type.DATE,  allowNull: false },
     })
 }
 

@@ -3,6 +3,7 @@ const md5 = require('md5');
 const { ForgotPassword, User } = require('../sequelize');
 const moment = require('moment')
 const { createHash } = require('../lib/bcrypt');
+
 generateTokenResetPassword = function (user) {
     return new Promise((resolve, reject) => {
         var token = generator.generate({
